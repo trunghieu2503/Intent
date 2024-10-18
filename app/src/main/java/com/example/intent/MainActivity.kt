@@ -9,54 +9,76 @@ import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 
+// Lớp MainActivity kế thừa từ AppCompatActivity
 class MainActivity : AppCompatActivity() {
-    lateinit var dataHelper: DataHelper
+    // Khai báo các biến thành phần cho các View và DataHelper
+    private lateinit var dataHelper: DataHelper // Biến để tương tác với cơ sở dữ liệu (SQLite)
+    private lateinit var nameEditText: EditText // Biến để nhập tên sinh viên
+    private lateinit var classEditText: EditText // Biến để nhập lớp học của sinh viên
+    private lateinit var radioGroup: RadioGroup // Biến để chọn trạng thái tham gia (tham gia hay chưa tham gia)
+    private lateinit var okButton: Button // Biến đại diện cho nút OK
+    private lateinit var exitButton: Button // Biến đại diện cho nút EXIT
 
     // Hàm onCreate được gọi khi Activity khởi tạo
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge() // Kích hoạt chế độ hiển thị cạnh trên cạnh dưới cho giao diện
-        setContentView(R.layout.main) // Liên kết giao diện XML với Activity
+        enableEdgeToEdge() // Kích hoạt chế độ hiển thị cạnh trên cạnh dưới cho giao diện (tăng trải nghiệm hiển thị toàn màn hình)
+        setContentView(R.layout.main) // Gán giao diện XML (layout) cho Activity
 
-        dataHelper = DataHelper(this) // Khởi tạo đối tượng DataHelper để làm việc với cơ sở dữ liệu
+        // Khởi tạo đối tượng DataHelper để làm việc với cơ sở dữ liệu
+        dataHelper = DataHelper(this) // Sử dụng context của Activity hiện tại để tạo một instance của DataHelper
 
         // Tham chiếu đến các view trong layout
-        val nameEditText = findViewById<EditText>(R.id.nameEditText) // Tham chiếu đến EditText nhập tên
-        val classEditText = findViewById<EditText>(R.id.classEditText) // Tham chiếu đến EditText nhập lớp học
-        val radioGroup = findViewById<RadioGroup>(R.id.radioGroup) // Tham chiếu đến RadioGroup chọn tham gia hay không
-        val okButton = findViewById<Button>(R.id.okButton) // Tham chiếu đến nút OK
-        val exitButton = findViewById<Button>(R.id.exitButton) // Tham chiếu đến nút EXIT
+        nameEditText = findViewById(R.id.nameEditText) // Lấy đối tượng EditText từ layout (nhập tên sinh viên)
+        classEditText = findViewById(R.id.classEditText) // Lấy đối tượng EditText từ layout (nhập lớp học)
+        radioGroup = findViewById(R.id.radioGroup) // Lấy đối tượng RadioGroup từ layout (lựa chọn tham gia hay không)
+        okButton = findViewById(R.id.okButton) // Lấy đối tượng Button cho nút OK
+        exitButton = findViewById(R.id.exitButton) // Lấy đối tượng Button cho nút EXIT
 
         // Thiết lập sự kiện khi nhấn nút OK
         okButton.setOnClickListener {
-            val name = nameEditText.text.toString() // Lấy dữ liệu từ EditText nhập tên
-            val className = classEditText.text.toString() // Lấy dữ liệu từ EditText nhập lớp học
+            // Lấy dữ liệu từ EditText nhập tên và lớp học
+            val name = nameEditText.text.toString() // Lấy tên từ EditText
+            val className = classEditText.text.toString() // Lấy lớp học từ EditText
+
+            // Kiểm tra trạng thái RadioButton được chọn và gán chuỗi tương ứng
             val isJoined = if (radioGroup.checkedRadioButtonId == R.id.radioYes) {
-                "Đã tham gia" // Nếu chọn radioYes thì gán "Đã tham gia"
+                "Đã tham gia" // Nếu chọn "Yes" thì gán "Đã tham gia"
             } else {
-                "Chưa tham gia" // Nếu không thì gán "Chưa tham gia"
+                "Chưa tham gia" // Nếu chọn "No" thì gán "Chưa tham gia"
             }
 
-            // Kiểm tra nếu chưa nhập đủ tên và lớp học, hiện thông báo lỗi
-            if (name.isEmpty() || className.isEmpty()) {
-                Toast.makeText(this, "Vui lòng nhập tên và lớp học.", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener // Dừng xử lý sự kiện nếu có lỗi
+            // Kiểm tra nếu tên và lớp học không rỗng
+            if (name.isNotEmpty() && className.isNotEmpty()) {
+                // Tạo một đối tượng Student mới với thông tin nhập vào
+                val newStudent = Student(0, name, className, isJoined)
+                // Thêm sinh viên vào cơ sở dữ liệu
+                dataHelper.addStudent(newStudent)
+                // Xóa dữ liệu trong các EditText sau khi thêm
+                clear()
+                Toast.makeText(this, "Thêm thành công.", Toast.LENGTH_SHORT).show() // Hiển thị thông báo thành công
+                // Tạo Intent để chuyển sang Activity khác (MainActivity2), kèm theo dữ liệu đã nhập
+                val intent = Intent(this, MainActivity2::class.java).apply {
+                    putExtra("name", name) // Gửi tên sang Activity mới
+                    putExtra("className", className) // Gửi lớp học sang Activity mới
+                    putExtra("isJoined", isJoined) // Gửi trạng thái tham gia sang Activity mới
+                }
+                startActivity(intent) // Bắt đầu Activity mới
+            } else {
+                // Nếu tên hoặc lớp học bị trống, không làm gì (bạn có thể bổ sung thông báo lỗi)
             }
-
-            // Thêm thông tin học sinh vào cơ sở dữ liệu thông qua DataHelper
-            dataHelper.addStudent(name, className, isJoined)
-
-            // Tạo Intent để chuyển sang Activity MainActivity2, kèm theo dữ liệu tên, lớp và trạng thái tham gia
-            val intent = Intent(this, MainActivity2::class.java)
-            intent.putExtra("name", name)
-            intent.putExtra("className", className)
-            intent.putExtra("isJoined", isJoined)
-            startActivity(intent) // Bắt đầu Activity mới
         }
 
         // Thiết lập sự kiện khi nhấn nút EXIT
         exitButton.setOnClickListener {
-            finish() // Đóng Activity hiện tại
+            finish() // Kết thúc Activity hiện tại
         }
+    }
+
+    // Hàm xóa nội dung trong các trường nhập liệu
+    fun clear() {
+        nameEditText.text.clear() // Xóa dữ liệu nhập vào của EditText tên
+        classEditText.text.clear() // Xóa dữ liệu nhập vào của EditText lớp
+        radioGroup.clearCheck() // Bỏ chọn các RadioButton trong RadioGroup
     }
 }
